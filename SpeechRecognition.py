@@ -215,3 +215,59 @@ model = build_model(
     rnn_units=512,
 )
 model.summary(line_length=110)
+
+'''----===[Training NN]===----'''
+# A utility function to decode the output of the network
+def decode_batch_predictions(pred):
+    input_len = np.ones(pred.shape[0]) * pred.shape[1]
+    # Use greedy search. For complex tasks, you can use beam search
+    results = keras.backend.ctc_decode(pred, input_length=input_len, greedy=True)[0][0]
+    # Iterate over the results and get back the text
+    output_text = []
+    for result in results:
+        result = tf.strings.reduce_join(num_to_char(result)).numpy().decode("utf-8")
+        output_text.append(result)
+    return output_text
+
+
+# A callback class to output a few transcriptions during training
+class CallbackEval(keras.callbacks.Callback):
+    """Displays a batch of outputs after every epoch."""
+
+    def __init__(self, dataset):
+        super().__init__()
+        self.dataset = dataset
+
+    def on_epoch_end(self, epoch: int, logs=None):
+        predictions = []
+        targets = []
+        for batch in self.dataset:
+            X, y = batch
+            batch_predictions = model.predict(X)
+            batch_predictions = decode_batch_predictions(batch_predictions)
+            predictions.extend(batch_predictions)
+            for label in y:
+                label = (
+                    tf.strings.reduce_join(num_to_char(label)).numpy().decode("utf-8")
+                )
+                targets.append(label)
+        wer_score = wer(targets, predictions)
+        print("-" * 100)
+        print(f"Word Error Rate: {wer_score:.4f}")
+        print("-" * 100)
+        for i in np.random.randint(0, len(predictions), 2):
+            print(f"Target    : {targets[i]}")
+            print(f"Prediction: {predictions[i]}")
+            print("-" * 100)
+
+# Define the number of epochs.
+epochs = 1 #<----
+# Callback function to check transcription on the val set.
+validation_callback = CallbackEval(validation_dataset)
+# Train the model
+history = model.fit(
+    train_dataset,
+    validation_data=validation_dataset,
+    epochs=epochs,
+    callbacks=[validation_callback],
+)
