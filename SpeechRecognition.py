@@ -86,3 +86,48 @@ def encode_single_sample(wav_file, label):
     label = char_to_num(label)
     # 10. Return a dict as our model is expecting two inputs
     return spectrogram, label
+
+'''----===[Dataset]===----'''
+batch_size = 32
+# Define the trainig dataset
+train_dataset = tf.data.Dataset.from_tensor_slices(
+    (list(df_train["file_name"]), list(df_train["normalized_transcription"]))
+)
+train_dataset = (
+    train_dataset.map(encode_single_sample, num_parallel_calls=tf.data.AUTOTUNE)
+    .padded_batch(batch_size)
+    .prefetch(buffer_size=tf.data.AUTOTUNE)
+)
+
+# Define the validation dataset
+validation_dataset = tf.data.Dataset.from_tensor_slices(
+    (list(df_val["file_name"]), list(df_val["normalized_transcription"]))
+)
+validation_dataset = (
+    validation_dataset.map(encode_single_sample, num_parallel_calls=tf.data.AUTOTUNE)
+    .padded_batch(batch_size)
+    .prefetch(buffer_size=tf.data.AUTOTUNE)
+)
+
+'''----===[Visualize Spectrogram]===----'''
+fig = plt.figure(figsize=(8, 5))
+for batch in train_dataset.take(1):
+    spectrogram = batch[0][0].numpy()
+    spectrogram = np.array([np.trim_zeros(x) for x in np.transpose(spectrogram)])
+    label = batch[1][0]
+    # Spectrogram
+    label = tf.strings.reduce_join(num_to_char(label)).numpy().decode("utf-8")
+    ax = plt.subplot(2, 1, 1)
+    ax.imshow(spectrogram, vmax=1)
+    ax.set_title(label)
+    ax.axis("off")
+    # Wav
+    file = tf.io.read_file(wavs_path + list(df_train["file_name"])[0] + ".wav")
+    audio, _ = tf.audio.decode_wav(file)
+    audio = audio.numpy()
+    ax = plt.subplot(2, 1, 2)
+    plt.plot(audio)
+    ax.set_title("Signal Wave")
+    ax.set_xlim(0, len(audio))
+    display.display(display.Audio(np.transpose(audio), rate=16000))
+plt.show()
