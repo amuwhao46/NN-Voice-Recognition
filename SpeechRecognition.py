@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
+layers = tf.keras
 import matplotlib.pyplot as plt
 from IPython import display
 from jiwer import wer
