@@ -4,7 +4,6 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import layers
 import matplotlib.pyplot as plt
-from IPython import display
 from jiwer import wer
 
 # Download .wav dataset
@@ -129,7 +128,6 @@ for batch in train_dataset.take(1):
     plt.plot(audio)
     ax.set_title("Signal Wave")
     ax.set_xlim(0, len(audio))
-    display.display(display.Audio(np.transpose(audio), rate=16000))
 plt.show()
 
 '''----===[Model Data]===----'''
